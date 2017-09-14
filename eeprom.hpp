@@ -35,7 +35,7 @@
 using namespace std;
 
 
-#define MAX_EEPROM_SIZE         (512)
+#define MAX_EEPROM_SIZE         (512)               /* MUST fit in INT */
 
 #define VID_INDEX               (0x02)
 #define PID_INDEX               (0x04)
@@ -57,8 +57,8 @@ class FTDIDEV;
 class EEPROM {
 
 private:
-    int     eeprom_size;                /* EEPROM size from FTDIDEV */
-    int     buf_size[EEPROM_INDEX_MAX]; /* might be File size or EEPROM size */
+    unsigned int    eeprom_size;                /* EEPROM size from FTDIDEV */
+    unsigned int    buf_size[EEPROM_INDEX_MAX]; /* might be File size or EEPROM size */
 
     unsigned char       *(eeprom_buffer[EEPROM_INDEX_MAX]);
     struct ftdi_eeprom  *(ftdi_eeprom[EEPROM_INDEX_MAX]);
@@ -116,7 +116,7 @@ protected:
 
 public:
     /* Constructor / Destructor */
-    EEPROM( long in_size, long out_size, int eeprom_size )
+    EEPROM( unsigned int in_size, unsigned int out_size, unsigned int eeprom_size )
     {
         int i;
 

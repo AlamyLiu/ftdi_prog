@@ -113,11 +113,13 @@ int main(int argc, char* argv[])
      *      file    file    oSize = iSize
      *      file    FTDI    just read EEPROM size (pad 0 or truncate)
      */
-    long iSize = 0, oSize = 0;
+    unsigned int iSize = 0, oSize = 0;
     if ( opt->isInFTDIDEV() || opt->isOutFTDIDEV() ) {
         iSize = oSize = ftdi_dev->get_eeprom_size();
     } else {
-        oSize = iSize = opt->getInFileSize();
+        /* eeprom size type is INT, prevent overflow */
+        long fSize = min(opt->getInFileSize(), (long)MAX_EEPROM_SIZE);
+        oSize = iSize = static_cast<unsigned int>(fSize);   /* Safe: value in INT scope */
     }
 
     try {

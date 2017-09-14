@@ -158,7 +158,7 @@ public:
     string  getOutFname()   { return optValue.oFname; }
     bool    isInFile()      { return !getInFname().empty(); }
     bool    isOutFile()     { return !getOutFname().empty(); }
-    size_t  getInFileSize() { return optValue.iFsize; }
+    long    getInFileSize() { return optValue.iFsize; }
 
     bool    isInputDefined() {
                 return ( isInFTDIDEV() || !getInFname().empty() );
