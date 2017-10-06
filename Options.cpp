@@ -37,7 +37,7 @@ Options::Options(
 
     int rc;
 
-	while ( (opt = getopt_long(argc, argv, "v:p:i:o:m:n:x:y:z:",
+	while ( (opt = getopt_long(argc, argv, "hv:p:i:o:m:n:x:y:z:",
 		long_opts, &opt_index)) != -1) {
 
 		switch (opt) {
