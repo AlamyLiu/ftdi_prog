@@ -34,12 +34,12 @@
 //#include <string>
 #include <cstdlib>      // malloc, free
 #include <fstream>		// ifstream, ofstream
+#include <iomanip>      // setw, setfill, ...
 #include <stdlib.h>		// atoi
 #include <unistd.h>		// getopt()
 //#include <ftdi.h>
 #include "Options.hpp"
 #include "ftdi_dev.hpp"
-#include "eeprom.hpp"
 //#include "DebugW.hpp"		// Debug
 
 using namespace std;
@@ -47,7 +47,7 @@ using namespace std;
 // Classes
 Options *opt;
 FTDIDEV *ftdi_dev;
-EEPROM  *eeprom;
+FILE    *file;
 
 //Debug		*dbg;		/* Warning: should be created before List */
 
@@ -62,11 +62,7 @@ static void atexit_delete_ftdidev(void)
 //    cout << __func__ << ":" << __LINE__ << endl;
     delete ftdi_dev;
 }
-static void atexit_delete_eeprom(void)
-{
-//    cout << __func__ << ":" << __LINE__ << endl;
-    delete eeprom;
-}
+
 
 
 
@@ -88,11 +84,28 @@ int main(int argc, char* argv[])
     opt->applyHiddenRules();
 
     /* open FTDI device */
-    /* Allow fails: so that FTDIDEV methods could still be use */
-    ftdi_dev = new FTDIDEV( opt->getVid(), opt->getPid() );
+    /* Allow fails: so that FTDIDEV methods could still be used.
+     * i.e.: just browsing file content
+     */
+    try {
+        ftdi_dev = (opt->isInFTDIDEV() || opt->isOutFTDIDEV())
+            ? new FTDIDEV( opt->getVid(), opt->getPid() )
+            : new FTDIDEV();
+    } catch (std::runtime_error &e) {
+        cerr << e.what() << endl;
+        exit( EXIT_FAILURE );
+    }
+/*
+    } catch (int e) {
+        cerr << "Error: " << e << endl;
+        exit( EXIT_FAILURE );
+    }
+*/
     atexit( &atexit_delete_ftdidev );
 
-    ftdi_dev->show_info();  /* debugging */
+    if (opt->isInFTDIDEV() || opt->isOutFTDIDEV()) {
+        ftdi_dev->show_info();  /* debugging */
+    }
 
     /* At this point, we know
      *  EEPROM size: from FTDIDEV
@@ -118,58 +131,66 @@ int main(int argc, char* argv[])
         iSize = oSize = ftdi_dev->get_eeprom_size();
     } else {
         /* eeprom size type is INT, prevent overflow */
-        long fSize = min(opt->getInFileSize(), (long)MAX_EEPROM_SIZE);
+        long fSize = min(opt->getInFileSize(), (long)FTDI_MAX_EEPROM_SIZE);
         oSize = iSize = static_cast<unsigned int>(fSize);   /* Safe: value in INT scope */
     }
-
-    try {
-        eeprom = new EEPROM( iSize, oSize, ftdi_dev->get_eeprom_size() );
-    } catch (std::bad_alloc& ba) {
-        cerr << ba.what() << endl;
-        cerr << "Fail to create EEPROM object!" << endl;
-        return EXIT_FAILURE;
-    }
-    atexit( &atexit_delete_eeprom );
+    cout << "Size (I,O) = " << iSize << ", " << oSize << endl;
+    ftdi_dev->set_buffer_sizes(iSize, oSize);
 
 
-    /* Input from EEPROM or File */
-    if ( eeprom->read( opt, ftdi_dev ) < 0 ) {
+    /*
+     * 1. INPUT: Read from EEPROM or File
+     */
+    if ( ftdi_dev->read(
+        opt->isInFTDIDEV(),
+        opt->getInFname(),
+        opt->verboseMode()) < 0 )
+    {
         cerr << "Failed to Read!" << endl;
         return EXIT_FAILURE;
     }
 
-    /* Input Only: Skip bunch of things if there is no output
-     * But still has to output data (if required)
+
+    /*
+     * 2. DECODE (binary -> structure)
      */
-    if ( !opt->isOutputDefined() )      goto no_output;
+    ftdi_dev->decode( opt->verboseMode() );
 
 
-    /* make a copy of binary data to output: for 'update' later */
-    if ( opt->isOutputDefined() ) {
-        eeprom->copy_eeprom_buffer( OUT, IN );  /* Binary */
-        eeprom->decode( ftdi_dev, OUT );        /* Binary -> structure */
-        // copy_ftdi_eeprom( OUT, IN );
-    }
+    /*
+     * 3. UPDATE
+     */
+    /* Input Only or No Update: Skip UPDATE & ENCODE steps.
+     * Note: still output data (if required)
+     */
+    if ( !opt->isOutputDefined() || !opt->isUpdate() )
+        goto skip_update;
 
-    /* No update: Skip update & build steps */
-    if ( !opt->isUpdate() )     goto skip_update;
-
-    /* Update (working in OUTPUT ftdi_eeprom structure) */
-    if ( opt->isUpdate_vid() )  eeprom->update_vid( opt->getUpdate_vid() );
-    if ( opt->isUpdate_pid() )  eeprom->update_pid( opt->getUpdate_pid() );
-
+    if ( opt->isUpdate_vid() )  ftdi_dev->update_vid( opt->getUpdate_vid() );
+    if ( opt->isUpdate_pid() )  ftdi_dev->update_pid( opt->getUpdate_pid() );
+#if 0
     if ( opt->isUpdate_manufacturer() )
         eeprom->update_manufacturer( opt->getUpdate_manufacturer() );
     if ( opt->isUpdate_product() )
         eeprom->update_product( opt->getUpdate_product() );
     if ( opt->isUpdate_serial() )
         eeprom->update_serial( opt->getUpdate_serial() );
+#else
+    ftdi_dev->update_strings(
+        opt->getUpdate_manufacturer(),
+        opt->getUpdate_product(),
+        opt->getUpdate_serial()
+    );
+#endif
 
-    /* Build */
+
+    /*
+     * 4. ENCODE (structure -> binary)
+     */
     /* if things go wrong, don't write out. But still like to show information */
     try {
-        if ( eeprom->build( OUT ) < 0 ) {
-            cerr << "Something is wrong. No output!" << endl;
+        if ( ftdi_dev->encode( opt->verboseMode() ) < 0 ) {
+            cerr << "Something is wrong in ENCODING. No output!" << endl;
             opt->setOutNULL();
             rc = EXIT_FAILURE;
         }
@@ -180,35 +201,31 @@ int main(int argc, char* argv[])
     }
 
 skip_update:
-no_output:
-    /* show IN & OUT side-by-side if there is '--out' */
+    /* show output information */
     if ( opt->isOutputDefined() || opt->isUpdate() ) {
-        if ( opt->viewBinary() )    eeprom->dumpInOut();    /* Binary dump */
-        if ( opt->viewHuman() )     eeprom->showInOut();    /* Human readable */
-    } else {
-        /* Only IN */
-        if ( opt->viewBinary() )    eeprom->dump( IN );
-        if ( opt->viewHuman() )     eeprom->show( IN );
-        if ( opt->verboseMode() ) {
-            cout << hex
-                 << "checksum: " << eeprom->calculateChecksum( IN ) << endl
-                 << dec;
-        }
+        if ( opt->viewBinary() )    ftdi_dev->dump( oSize );  /* Binary dump */
+//        if ( opt->viewHuman() )     ftdi_dev->showInOut();  /* Human readable */
     }
 
-    /* Output to EEPROM or File */
-    /* Need to check isOutputDefined() here, as the input only case jumps
-     * to no_output label to display information
+
+    /*
+     * 5. OUTPUT: Write to EEPROM or File
+     */
+    /* Need to check isOutputDefined() here, as the _input only_ case
+     * also comes here.
      */
     if ( opt->isOutputDefined() ) {
-        if (eeprom->write( opt, ftdi_dev ) < 0) {
-            cerr << "Fail to write EEPROM data!" << endl;
+        if ( ftdi_dev->write(
+            opt->isOutFTDIDEV(),
+            opt->getOutFname(),
+            opt->verboseMode()) < 0 )
+        {
+            cerr << "Failed to Write!" << endl;
+            return EXIT_FAILURE;
         }
     }
 
 
 //	delete dbg;
-
     return rc;
-
 }

@@ -20,9 +20,10 @@
     MA  02110-1301, USA.
 */
 
-#include <getopt.h>		    /* getopt_long */
+#include <getopt.h>         /* getopt_long */
 #include <iostream>         /* cout */
-#include <fstream>		// ifstream, ofstream
+#include <iomanip>          /* setw, setfill, ... */
+#include <fstream>          /* ifstream, ofstream */
 #include <string.h>         /* strcmp */
 #include "Options.hpp"
 
@@ -213,7 +214,10 @@ void Options::ShowHelp( void )
 void Options::ShowOpts( void )
 {
     cout.setf(ios::hex, ios::basefield);
-    cout << "(vid, pid) = " << optValue.vid << ", " << optValue.pid << endl;
+    cout << setfill('0');
+    cout << "(vid, pid) = "
+         << setw(4) << optValue.vid << ", "
+         << setw(4) << optValue.pid << endl;
     cout.unsetf(ios::hex);
 
     cout << "flag: verbose = "
