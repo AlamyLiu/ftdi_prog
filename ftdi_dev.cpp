@@ -92,6 +92,14 @@ err_new:
 //    throw rc;
 }
 
+FTDIDEV::FTDIDEV( int vid, int pid, enum ftdi_chip_type type )
+    : FTDIDEV( vid, pid )
+{
+    if (ftdi) {
+        ftdi->type = type;
+    }
+}
+
 FTDIDEV::~FTDIDEV()
 {
     if (ftdi) {
@@ -124,6 +132,9 @@ int FTDIDEV::read_file(string path)
     if ( rc != 0 ) {
         cerr << "Fail to set EEPROM buffer" << endl;
     }
+
+    /* CAUTION: Hacking libftdi to enable this feature */
+    ftdi_set_eeprom_value(ftdi, CHIP_SIZE, buf_size);
 
     return 0;
 }
@@ -172,7 +183,9 @@ int FTDIDEV::write_eeprom()
 
     if ( !ftdi )        return -ENODEV;
 
-    if ((rc = ftdi_write_eeprom(ftdi)) < 0) {
+    if ((rc = ftdi_write_eeprom(ftdi)) == 0) {
+        cout << "Replug device to see the result!" << endl;
+    } else {
         cerr << "Fail to Write EEPROM: " << rc
              << "(" << ftdi_get_error_string(ftdi) << ")" << endl;
     }

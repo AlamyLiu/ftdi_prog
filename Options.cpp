@@ -231,10 +231,14 @@ void Options::ShowOpts( void )
     cout << "flag: out_ftdidev = "
          << (optValue.flags.out_ftdidev ? "Yes" : "No") << endl;
 
-    cout << "In Fname = "
-         << (isInFile()  ? getInFname()  : "(null)") << endl;
-    cout << "Out Fname = "
-         << (isOutFile() ? getOutFname() : "(null)") << endl;
+    cout << "In  = "
+         << (isInFile()
+            ? ("(file) " + getInFname())
+            : (isInFTDIDEV() ? "EEPROM" : "(null)") ) << endl;
+    cout << "Out = "
+         << (isOutFile()
+            ? ("(file) " + getOutFname())
+            : (isOutFTDIDEV() ? "EEPROM" : "(null)") ) << endl;
 
     cout << endl;
 }

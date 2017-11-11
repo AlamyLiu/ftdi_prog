@@ -68,6 +68,7 @@ public:
     /* Constructor / Destructor */
     FTDIDEV();                      /* File only operation */
     FTDIDEV( int vid, int pid );    /* FTDI device operation */
+    FTDIDEV( int vid, int pid, enum ftdi_chip_type type );  /* set chip type */
     ~FTDIDEV();
 
     bool    is_EEPROM_blank()   { return eeprom_blank; }

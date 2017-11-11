@@ -80,8 +80,8 @@ int main(int argc, char* argv[])
         exit( EXIT_SUCCESS );
     }
     atexit( &atexit_free_options );
-    opt->ShowOpts();
     opt->applyHiddenRules();
+    opt->ShowOpts();
 
     /* open FTDI device */
     /* Allow fails: so that FTDIDEV methods could still be used.
