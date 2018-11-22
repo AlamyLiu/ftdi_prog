@@ -40,6 +40,9 @@ typedef struct OPT_FLAGS_S {
     int view_binary;                /* Binary dump    (eeprom_buffer) */
     int view_human;                 /* Human readable (struct ftdi_eeprom) */
 
+    int open_bus;                   /* open usb with bus:dev */
+    int open_id;                    /* open usb with vid:pid */
+
     int update;                     /* --update-xxx option */
 
     int in_ftdidev;                 /* Read from FTDI Device (EEPROM) */
@@ -63,6 +66,11 @@ typedef struct OPT_UPDATE_S {
 typedef struct OPT_VALUE_S {
     OPT_FLAGS_T flags;
 
+    /* bus:devnum */
+    unsigned int    bus;
+    unsigned int    dev;
+
+    /* vid:pid */
     unsigned int    vid;
     unsigned int    pid;
 
@@ -93,8 +101,10 @@ private:
         {"show-binary", no_argument,        &(optValue.flags.view_binary), 1},
         {"show-human",  no_argument,        &(optValue.flags.view_human),  1},
 
-        {"vid",         required_argument,  NULL,       'v'},
-        {"pid",         required_argument,  NULL,       'p'},
+        /* -s [bus:dev] : similar to libusb */
+        {"bus",         required_argument,  NULL,       's'},
+        /* -d [vid:pid] : similar to libusb */
+        {"id",          required_argument,  NULL,       'd'},
 
         {"in",          required_argument,  NULL,       'i'},
         {"out",         required_argument,  NULL,       'o'},
@@ -140,9 +150,14 @@ public:
     void    applyHiddenRules( void );
     int     validateOptions( int eeprom_size );
 
+    int     getBus()        { return optValue.bus; }
+    int     getDev()        { return optValue.dev; }
+    bool    isBusDefined() {
+                return ((getBus() != 0) && (getDev() != 0));
+    }
     int     getVid()        { return optValue.vid; }
     int     getPid()        { return optValue.pid; }
-    bool    isVidPidDefined() {
+    bool    isIdDefined() {
                 return ((getVid() != 0) && (getPid() != 0));
     }
 

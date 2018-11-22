@@ -28,6 +28,7 @@
 #include <fstream>      // ifstream, ofstream
 #include <string.h>     // memcpy
 #include <ftdi.h>
+#include "Options.hpp"
 
 
 /* copied from libftdi::ftdi_i.h */
@@ -66,9 +67,10 @@ protected:
 
 public:
     /* Constructor / Destructor */
-    FTDIDEV();                      /* File only operation */
-    FTDIDEV( int vid, int pid );    /* FTDI device operation */
-    FTDIDEV( int vid, int pid, enum ftdi_chip_type type );  /* set chip type */
+    FTDIDEV( Options *opt );    /* set opt to NULL for file only operation */
+    /* TODO: able to set chip type
+    FTDIDEV( int vid, int pid, enum ftdi_chip_type type );  // set chip type
+    */
     ~FTDIDEV();
 
     bool    is_EEPROM_blank()   { return eeprom_blank; }

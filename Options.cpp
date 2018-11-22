@@ -35,10 +35,10 @@ Options::Options(
 	// Retrieve options
 	int opt_index = 0;
 	int opt;
+	char *token;
+	int rc;
 
-    int rc;
-
-	while ( (opt = getopt_long(argc, argv, "hv:p:i:o:m:n:x:y:z:",
+	while ( (opt = getopt_long(argc, argv, "hs:d:i:o:m:n:x:y:z:",
 		long_opts, &opt_index)) != -1) {
 
 		switch (opt) {
@@ -46,9 +46,23 @@ Options::Options(
                     throw -ECANCELED;
                     break;
 
-        /* VID / PID */
-        case 'v':   optValue.vid = stoi( optarg, nullptr, 0 );  break;
-        case 'p':   optValue.pid = stoi( optarg, nullptr, 0 );  break;
+        /* -s bus:devnum */
+        case 's':   if ((token = strtok(optarg, ":")) == NULL)  break;
+                    optValue.bus = stoi( token, nullptr, 0 );
+                    if ((token = strtok(  NULL, ":")) == NULL)  break;
+                    optValue.dev = stoi( token, nullptr, 0 );
+
+                    optValue.flags.open_bus = 1;
+                    break;
+
+        /* -d vid/pid */
+        case 'd':   if ((token = strtok(optarg, ":")) == NULL)  break;
+                    optValue.vid = stoi( token, nullptr, 0 );
+                    if ((token = strtok(  NULL, ":")) == NULL)  break;
+                    optValue.pid = stoi( token, nullptr, 0 );
+
+                    optValue.flags.open_id = 1;
+                    break;
 
         /* In / Out */
         case 'i':   if (strcmp(optarg, IN_OUT_EEPROM_NAME) == 0)
@@ -112,12 +126,14 @@ Options::Options(
 
 void Options::applyHiddenRules()
 {
-    /* if IN/OUT were not defined, but VID/PID are provided
+    /* if IN/OUT were not defined, but Bus or ID are provided
      * {
      *      set IN to FTDIDEV
      * }
      */
-    if ( !isInputDefined() && isVidPidDefined() ) {
+    if ( !isInputDefined()
+        && (isBusDefined() || isIdDefined()) )
+    {
         setInFTDIDEV();
     }
 
@@ -144,10 +160,10 @@ int Options::validateOptions( int eeprom_size )
         return -EINVAL;
     }
 
-    /* FTDIDEV depends on VID/PID */
+    /* FTDIDEV depends on Bus/ID */
     if ( isInFTDIDEV() || isOutFTDIDEV() ) {
-        if ( !isVidPidDefined() ) {
-            cerr << "VID/PID is not defined!" << endl;
+        if ( !(isBusDefined() || isIdDefined()) ) {
+            cerr << "bus:dev or vid:pid is not provided!" << endl;
             return -EINVAL;
         }
     }
@@ -197,8 +213,8 @@ void Options::ShowHelp( void )
          << "verbose        Verbose mode" << endl
          << "show-binary    Dump EEPROM binary data" << endl
          << "show-human     Human readable (decode from binary)" << endl
-         << "vid            Vendor ID" << endl
-         << "pid            Product ID" << endl
+         << "bus            bus:dev (like lsusb)" << endl
+         << "id             vid:pid (like lsusb)" << endl
          << "in             Input (EEPROM or filename)" << endl
          << "out            Output (EEPROM or filename)" << endl
          << endl
@@ -215,11 +231,18 @@ void Options::ShowOpts( void )
 {
     cout.setf(ios::hex, ios::basefield);
     cout << setfill('0');
-    cout << "(vid, pid) = "
-         << setw(4) << optValue.vid << ", "
+    cout << "(bus:dev) = "
+         << setw(3) << optValue.bus << ":"
+         << setw(3) << optValue.dev << endl;
+    cout << "(vid:pid) = "
+         << setw(4) << optValue.vid << ":"
          << setw(4) << optValue.pid << endl;
     cout.unsetf(ios::hex);
 
+    cout << "flag: open_bus = "
+         << (optValue.flags.open_bus ? "Yes" : "No") << endl;
+    cout << "flag: open_id = "
+         << (optValue.flags.open_id ? "Yes" : "No") << endl;
     cout << "flag: verbose = "
          << (optValue.flags.verbose ? "Yes" : "No") << endl;
     cout << "flag: view_binary = "

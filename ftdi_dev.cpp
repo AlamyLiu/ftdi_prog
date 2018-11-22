@@ -28,31 +28,17 @@
 
 /* -------------------- Constructor / Destructor -------------------- */
 
-FTDIDEV::FTDIDEV()
+#if 0
+FTDIDEV::FTDIDEV( int vid, int pid, enum ftdi_chip_type type )
+    : FTDIDEV( vid, pid )
 {
-    string err_string;
-
-    /* Already created */
-    if (ftdi != NULL) {
-        return;
+    if (ftdi) {
+        ftdi->type = type;
     }
-
-    if ((ftdi = ftdi_new()) == NULL) {
-        err_string = "Failed to new FTDI!";
-        goto err_new;
-    }
-
-    return;
-
-err_new:
-    throw std::runtime_error( err_string );
-/*
-    cerr << err_string << endl;
-    throw rc;
-*/
 }
+#endif
 
-FTDIDEV::FTDIDEV( int vid, int pid )
+FTDIDEV::FTDIDEV( Options *opt )
 {
     int     rc;
     string  err_string;
@@ -67,12 +53,37 @@ FTDIDEV::FTDIDEV( int vid, int pid )
         goto err_new;
     }
 
-    /* Use ftdi_usb_open_desc() to specify _description_ & _serial_ of
+
+    /* Not really accessing USB device's EEPROM. i.e.: file */
+    if (
+        (opt == NULL)
+        || ( !(opt->isInFTDIDEV() || opt->isOutFTDIDEV()) )
+    ) {
+        return;
+    }
+    assert( opt->isBusDefined() || opt->isIdDefined() );
+
+
+    /* Open by bus:dev - ftdi_usb_open_bus_addr */
+    if ( opt->isBusDefined() ) {
+        rc = ftdi_usb_open_bus_addr(ftdi,
+            opt->getBus(), opt->getDev());
+        if (rc < 0) {
+            goto err_open;
+        }
+    }
+    /* Open by pid:vid - ftdi_usb_open */
+    if ( opt->isIdDefined() ) {
+        rc = ftdi_usb_open(ftdi,
+            opt->getVid(), opt->getPid());
+        if (rc < 0) {
+            goto err_open;
+        }
+    }
+    /* ToDo: Use ftdi_usb_open_desc() to specify _description_ & _serial_ of
      * the device
      */
-    if ((rc = ftdi_usb_open(ftdi, vid, pid)) < 0) {
-        goto err_open;
-    }
+
 
     /* IMPORTANT: Perform a EEPROM read to get eeprom size */
     if ((rc = read_eeprom()) < 0) {
@@ -90,14 +101,6 @@ err_new:
     throw std::runtime_error( err_string );
 //    cerr << err_string << endl;
 //    throw rc;
-}
-
-FTDIDEV::FTDIDEV( int vid, int pid, enum ftdi_chip_type type )
-    : FTDIDEV( vid, pid )
-{
-    if (ftdi) {
-        ftdi->type = type;
-    }
 }
 
 FTDIDEV::~FTDIDEV()

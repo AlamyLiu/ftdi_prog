@@ -88,9 +88,7 @@ int main(int argc, char* argv[])
      * i.e.: just browsing file content
      */
     try {
-        ftdi_dev = (opt->isInFTDIDEV() || opt->isOutFTDIDEV())
-            ? new FTDIDEV( opt->getVid(), opt->getPid() )
-            : new FTDIDEV();
+        ftdi_dev = new FTDIDEV( opt );
     } catch (std::runtime_error &e) {
         cerr << e.what() << endl;
         exit( EXIT_FAILURE );
