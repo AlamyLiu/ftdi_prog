@@ -1,8 +1,8 @@
 
 CC = g++
-CFLAGS = -I. -std=gnu++11 -D_DEBUG -ggdb -I/usr/local/include/libftdi1
-LFLAGS = -L/usr/local/lib
-LIBS = -lftdi1
+CFLAGS = -I. -std=gnu++11 -D_DEBUG -ggdb `pkg-config --cflags libftdi1`
+#LFLAGS = -L/usr/local/lib
+LIBS = `pkg-config --libs libftdi1`
 #LIBS = /usr/local/lib/libftdi1.so.2.4.0
 TARGET = ftdi_prog
 

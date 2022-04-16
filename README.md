@@ -6,8 +6,9 @@ http://www.ftdichip.com/Support/Documents/AppNotes/AN_124_User_Guide_For_FT_PROG
 
 #### Required package
 - libftdi 1.4
-  Installed under /usr/local
-```$ cmake -DCMAKE_INSTALL_PREFIX="/usr/local" ../```
+  ~~installed under /usr/local~~
+~~```$ cmake -DCMAKE_INSTALL_PREFIX="/usr/local" ../```~~
+  Modified to use pkg-config since libftdi1 is available on a lot of distribution.
 
 #### Compile & Run
 If the local built libftdi is not installed in one of the system directories
