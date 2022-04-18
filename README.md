@@ -1,22 +1,64 @@
 # ftdi_prog
 The Linux alternative to the FTDI Utility FT_PROG
 
-#### Windows based FT Prog applicaion
+### Windows based FT Prog applicaion
 http://www.ftdichip.com/Support/Documents/AppNotes/AN_124_User_Guide_For_FT_PROG.pdf
 
-#### Required package
-- libftdi 1.4
-  Installed under /usr/local
-```$ cmake -DCMAKE_INSTALL_PREFIX="/usr/local" ../```
+### Required package
+- libftdi 1.4 (dev)
+- libusb-1.0.0-dev
 
-#### Compile & Run
-If the local built libftdi is not installed in one of the system directories
-```$ export LD_LIBRARY_PATH=/home/alamy/lib```
-Where it could find the libftdi1.so.2.4.0
+#### Install from package
+```
+    $ sudo apt install libusb-1.0.0-dev
+    $ sudo apt install libftdi1-dev
+```
+#### Compile libftdi1 from source
+Note: just an idea. You know what you are doing, tweak paths yourself.
+```
+$ cd <libftdi>
+$ mkdir BUILD; cd BUILD
+$ cmake -DCMAKE_INSTALL_PREFIX=~/local ../
+$ make; make install
 
-#### The code is based on LIBFTDI 1.4
+~/local
+|-- bin
+|   `-- libftdi1-config
+|-- include
+|   `-- libftdi1
+|       `-- ftdi.h         # <-- header
+`-- lib
+    |-- cmake
+    |   `-- libftdi1
+    |       |-- LibFTDI1Config.cmake
+    |       |-- LibFTDI1ConfigVersion.cmake
+    |       `-- UseLibFTDI1.cmake
+    |-- pkgconfig
+    |   |-- libftdi1.pc
+    |   `-- libftdipp1.pc
+    |-- libftdi1.a
+    |-- libftdi1.so -> libftdi1.so.2
+    |-- libftdi1.so.2 -> libftdi1.so.2.4.0
+    `-- libftdi1.so.2.4.0  # <-- library
+```
+
+### Compile & Run
+If the local built libftdi1 is not installed in one of the system directories
+```
+    $ export LD_LIBRARY_PATH=~/local/lib
+```
+Where it could find the **libftdi1.so.2.4.0**
+
+```
+$ cd <ftdi_prog>
+$ make
+
+<ftdi_prog>
+`-- ftdi_prog              # <-- target binary
+```
+
+### The code is based on LIBFTDI 1.4
 - Refer to /usr/local/include/libftdi1/ftdi.h
-```export LD_LIBRARY_PATH=/usr/local/lib```
 
 ```
   parameters
@@ -30,7 +72,7 @@ Where it could find the libftdi1.so.2.4.0
 
 ```
 
-#### Procedure
+### Procedure
 1. Input  (read: EEPROM or FILE: binary)
 2. Decode (binary -> structure)
 3. Update (modify fields in structure)
@@ -68,13 +110,13 @@ OUTPUT      /  EEPROM  /       /   FILE   /
           ------------       ------------
 ```
 
-#### Data flow
+### Data flow
 ```{.cpp}
 ----------------------------------------
 libftdi 1.4 structure
 ----------------------------------------
 
-/* Even on 93xx66 at max 256 bytes are used (AN_121)*/
+/* Even on 93xx66 at max 256 bytes are used (AN_121) */
 #define FTDI_MAX_EEPROM_SIZE 256
 
 struct ftdi_context                                 # ftdi_new()
