@@ -101,9 +101,9 @@ public:
     void    dump(unsigned int buf_size);
 
     int     update_vid( unsigned int vid )
-            { ftdi_set_eeprom_value(ftdi, VENDOR_ID, vid); }
+            { return ftdi_set_eeprom_value(ftdi, VENDOR_ID, vid); }
     int     update_pid( unsigned int pid )
-            { ftdi_set_eeprom_value(ftdi, PRODUCT_ID, pid); }
+            { return ftdi_set_eeprom_value(ftdi, PRODUCT_ID, pid); }
 
     int     update_strings(
                 char *m,    /* manufacturer */
